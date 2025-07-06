@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Belot točke</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" href="icon.png">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2em; background: #f9f9f9; }
+    h1 { text-align: center; }
+    .player-input { margin-bottom: 1em; }
+    .player-scores { margin-top: 1.5em; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: center; }
+    .winner { color: green; font-weight: bold; }
+    button { margin-top: 1em; padding: 0.5em 1em; }
+  </style>
+</head>
+<body>
+  <h1>Beleženje točk - Belot</h1>
+
+  <div>
+    <h3>Dodaj igralce</h3>
+    <input type="text" id="playerName" placeholder="Ime igralca" />
+    <button onclick="addPlayer()">Dodaj igralca</button>
+    <ul id="playerList"></ul>
+  </div>
+
+  <div id="scoreSection" style="display: none;">
+    <h3>Vnesi točke za novo igro</h3>
+    <div id="scoreInputs"></div>
+    <button onclick="submitScores()">Potrdi točke</button>
+    <div id="winnerMessage"></div>
+
+    <div class="player-scores">
+      <h3>Trenutni rezultati</h3>
+      <table>
+        <thead>
+          <tr id="scoreTableHeader"></tr>
+        </thead>
+        <tbody id="scoreTableBody"></tbody>
+      </table>
+    </div>
+    <button onclick="resetGame()">Začni novo igro</button>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+
+    let players = [];
+    let scores = [];
+    const targetScore = 400;
+
+    function addPlayer() {
+      const nameInput = document.getElementById("playerName");
+      const name = nameInput.value.trim();
+      if (name && !players.includes(name)) {
+        players.push(name);
+        nameInput.value = "";
+        renderPlayerList();
+      }
+      if (players.length >= 2) {
+        document.getElementById("scoreSection").style.display = "block";
+        renderScoreInputs();
+        renderScoreTable();
+      }
+    }
+
+    function renderPlayerList() {
+      const list = document.getElementById("playerList");
+      list.innerHTML = players.map(p => `<li>${p}</li>`).join("");
+    }
+
+    function renderScoreInputs() {
+      const container = document.getElementById("scoreInputs");
+      container.innerHTML = players
+        .map(p => `
+          <div class="player-input">
+            <label>${p}:</label>
+            <input type="number" id="score-${p}" value="0" />
+          </div>
+        `)
+        .join("");
+    }
+
+    function renderScoreTable() {
+      const header = document.getElementById("scoreTableHeader");
+      header.innerHTML = players.map(p => `<th>${p}</th>`).join("");
+
+      const body = document.getElementById("scoreTableBody");
+      body.innerHTML = scores
+        .map(round => `<tr>${round.map(s => `<td>${s}</td>`).join("")}</tr>`)
+        .join("");
+    }
+
+    function submitScores() {
+      const round = players.map(p => {
+        const val = parseInt(document.getElementById(`score-${p}`).value);
+        return isNaN(val) ? 0 : val;
+      });
+
+      scores.push(round);
+      renderScoreTable();
+
+      const totals = players.map((_, i) => scores.reduce((sum, round) => sum + round[i], 0));
+      const winnerIndex = totals.findIndex(score => score >= targetScore);
+
+      if (winnerIndex !== -1) {
+        document.getElementById("winnerMessage").innerHTML = `<p class="winner">Zmagovalec je ${players[winnerIndex]} z ${totals[winnerIndex]} točkami!</p>`;
+      }
+    }
+
+    function resetGame() {
+      players = [];
+      scores = [];
+      document.getElementById("playerList").innerHTML = "";
+      document.getElementById("scoreInputs").innerHTML = "";
+      document.getElementById("scoreTableHeader").innerHTML = "";
+      document.getElementById("scoreTableBody").innerHTML = "";
+      document.getElementById("winnerMessage").innerHTML = "";
+      document.getElementById("scoreSection").style.display = "none";
+    }
+  </script>
+</body>
+</html>
